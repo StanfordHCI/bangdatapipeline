@@ -462,7 +462,7 @@ class BangDataResult():
         return self.__raw_df
 
     def team_df(self):
-        return self.__team_df['u']
+        return self.__team_df['user']
 
     def user_df(self):
         return self.__user_df
