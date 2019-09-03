@@ -287,13 +287,14 @@ class BangDataPipeline():
         m_df = pd.DataFrame(columns=['user', 'mc1', 'mc2', 'why'])
         i = 1
         for user in raw['users']:
-            if('survey' not in user):
-                continue
             user_id = user['user']['_id']
-            expRound1 = user['survey']['mainQuestion']['expRound1']
-            expRound2 = user['survey']['mainQuestion']['expRound2']
-            why = user['survey']['mainQuestion']['expRound3']
-            m_df.loc[i] = [user_id, expRound1, expRound2, why]
+            if('survey' not in user or 'mainQuestion' not in user['survey']):
+                m_df.loc[i] = [user_id, None, None, None]
+            else:
+                expRound1 = user['survey']['mainQuestion']['expRound1']
+                expRound2 = user['survey']['mainQuestion']['expRound2']
+                why = user['survey']['mainQuestion']['expRound3']
+                m_df.loc[i] = [user_id, expRound1, expRound2, why]
             i += 1
 
         # fill in extra column with whether they were correct
@@ -308,17 +309,19 @@ class BangDataPipeline():
         m_df = pd.DataFrame(columns=['user', 'guessedName', 'actualName'])
         i = 1
         for user in raw['users']:
-            if('survey' not in user or 'singleTeamQuestion' not in user['survey']):
-                continue
             user_id = user['user']['_id']
-            guessed = user['survey']['singleTeamQuestion']['chosenPartnerName']
-            actual = user['survey']['singleTeamQuestion']['actualPartnerName']
-            m_df.loc[i] = [user_id, guessed, actual]
+            if('survey' not in user or 'singleTeamQuestion' not in user['survey']):
+                m_df.loc[i] = [user_id, None, None]
+            else:
+                guessed = user['survey']['singleTeamQuestion']['chosenPartnerName']
+                actual = user['survey']['singleTeamQuestion']['actualPartnerName']
+                m_df.loc[i] = [user_id, guessed, actual]
             i += 1
 
         # fill in extra column with whether they were correct
         if len(m_df.index) != 0:
-            m_df["correct"] = m_df.apply(lambda row: row["guessedName"] == row["actualName"], axis=1)
+            m_df["correct"] = m_df.apply(lambda row: row["guessedName"] == row["actualName"] 
+                                                if row["guessedName"] != None else None, axis=1)
         return m_df
 
     # CHAT LOG ANALYSIS #
