@@ -316,7 +316,7 @@ class BangDataPipeline():
 
         # fill in extra column with whether they were correct
         if len(m_df.index) != 0:
-            m_df["correct"] = m_df.apply(lambda row: row["guesedName"] == row["actualName"], axis=1)
+            m_df["correct"] = m_df.apply(lambda row: row["guessedName"] == row["actualName"], axis=1)
         return m_df
 
     # CHAT LOG ANALYSIS #
