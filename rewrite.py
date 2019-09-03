@@ -16,12 +16,11 @@ __version__ = "0.1.0"
 
 
 ### BANGDATAPIPELINE CLASS ###
-""" This class serves as the controller and modeller for the data pipeline.
-It fetches data and returns a BangDataResults object that contains the
-processed, analyzed data. """
-
-
 class BangDataPipeline():
+    """ This class serves as the controller and modeller for the data pipeline.
+    It fetches data and returns a BangDataResults object that contains the
+    processed, analyzed data. """
+
     def __init__(self, token, survey_settings={"LENGTH": 0}, verbose=True):
         self._verbose = verbose
         # default survey_settings is blank
@@ -156,9 +155,9 @@ class BangDataPipeline():
                 chat = team['chat']['messages']
                 for user in team['users']:
                     user_id = user['user']
-                    if ('midSurvey' in user):
-                        df.loc[i] = [round_id, team_id, user_id,
-                                     user['midSurvey']['questions'], chat]
+                    mid_survey = user['midSurvey']['questions'] if 'midSurvey' in user else None
+                    df.loc[i] = [round_id, team_id, user_id,
+                                mid_survey, chat]
                     i += 1
         return df
 
@@ -197,6 +196,7 @@ class BangDataPipeline():
         """ given an uparsed survey object (one cell of u_df) return the 
         viability score by summing viability question answers """
         if (self._survey_settings["VIABILITY_START"] == None 
+            or survey == None
             or survey != survey 
             or len(survey) < self._survey_settings["LENGTH"]):
             return(None)
@@ -232,7 +232,7 @@ class BangDataPipeline():
     def __ind_fracture(self, survey):
         """given an unparsed survey json (one cell of u_df), 
         parse whether the person answered keep or not keep"""
-        if(survey != survey or len(survey) < self._survey_settings["LENGTH"]):
+        if(survey == None or survey != survey or len(survey) < self._survey_settings["LENGTH"]):
             return(None)
 
         fracture_res = "KEEP" if(int(
@@ -254,7 +254,7 @@ class BangDataPipeline():
     def __ind_fracture_why(self, survey):
         """given an unparsed survey json (one cell of u_df), 
         parse whether the person answered keep or not keep"""
-        if(survey != survey or len(survey) < self._survey_settings["LENGTH"]):
+        if(survey == None or survey != survey or len(survey) < self._survey_settings["LENGTH"]):
             return(None)
 
         fracture_res = survey[self._survey_settings["FRACTURE_WHY"]]['result']
@@ -274,6 +274,8 @@ class BangDataPipeline():
 
     # MANIPULATION ANALYSIS FUNCTIONS #
     def __analyze_manipulation(self, raw):
+        """ wrapper function for anlayzing manipulation. switches between 
+        the single and team functions depending on teamFormat """
         if raw["teamFormat"] == "single": return self.__analyze_manipulation_single(raw)
         else: return self.__analyze_manipulation_multi(raw)
 
@@ -345,6 +347,7 @@ class BangDataPipeline():
         msg_df = t_df.apply(self.__get_msg_per, axis=1)
         msg_df = msg_df.apply(lambda m: pd.to_numeric(m, errors="coerce")).astype(
             pd.Int32Dtype())  # convert to float
+        msg_df = msg_df.fillna(0) # fill in missing users with 0
         msg_df = msg_df.apply(lambda r: r.div(r.sum()), axis=1)  # convert to %
         return msg_df
 
@@ -390,7 +393,7 @@ class BangDataPipeline():
 
         fracture_why_team = self.__analyze_fracture_why_team(u_df, t_df)
         fracture_why_ind = self.__analyze_fracture_why_ind(u_df)
-        res.set("FRACTURE_why", fracture_why_team, fracture_why_ind)
+        res.set("FRACTURE_WHY", fracture_why_team, fracture_why_ind)
 
         chat_team = self.__analyze_chat_team(t_df)
         chat_ind = self.__analyze_chat_ind(u_df, t_df)
@@ -406,7 +409,7 @@ class BangDataPipeline():
         """ public analyze many batch ids at once """
         return [self.analyze(batch) for batch in batches]
 
-
+### BANGDATARESULT CLASS ###
 class BangDataResult():
     """ This class serves as the viewer for the data pipeline.
     It holds one batch's results as fed to it by BangDataPipeline.
@@ -419,6 +422,7 @@ class BangDataResult():
         self.batch = batch_id
         self.users = u_df.index
         self.teams = t_df.index
+        self.expRounds = json['expRounds']
 
         ## PRIVATE FIELDS ##
         self.__json = json
@@ -476,6 +480,10 @@ class BangDataResult():
     def fracture(self, ind=False):
         """ returns the fracture table, default at team-level """
         return self.__analyses["FRACTURE_IND"] if ind else self.__analyses["FRACTURE_TEAM"]
+    
+    def fracture_why(self, ind=False):
+        """ returns the fracture table, default at team-level """
+        return self.__analyses["FRACTURE_WHY_IND"] if ind else self.__analyses["FRACTURE_WHY_TEAM"]
     
     def chat(self, ind=False):
         """ returns the chat composition table, default at team-level """
