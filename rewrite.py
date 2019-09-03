@@ -482,7 +482,7 @@ class BangDataResult():
         return self.__analyses["CHAT_IND"] if ind else self.__analyses["CHAT_TEAM"]
     
     def manipulation(self):
-        return self.__analyses["MANIPULATION"]
+        return self.__analyses["MANIPULATION_TEAM"]
 
     def display(self):
         return list(self.__analyses.values())
