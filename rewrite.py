@@ -196,7 +196,9 @@ class BangDataPipeline():
     def __ind_viability(self, survey):
         """ given an uparsed survey object (one cell of u_df) return the 
         viability score by summing viability question answers """
-        if(survey != survey or len(survey) < self._survey_settings["LENGTH"]):
+        if (self._survey_settings["VIABILITY_START"] == None 
+            or survey != survey 
+            or len(survey) < self._survey_settings["LENGTH"]):
             return(None)
 
         sum_viability = 0
