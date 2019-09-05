@@ -114,7 +114,7 @@ class BangDataPipeline():
                     batches_df.loc[i, 'team format'] = batch['teamFormat']
                 if ('note' in batch):
                     batches_df.loc[i, 'note'] = batch['note']
-            i += 1
+                i += 1
 
         # output
         if self._verbose:
@@ -427,6 +427,8 @@ class BangDataPipeline():
 
         if self._verbose:
             print(f"\nAnalyzed the valid {len(res)} out of {len(batches)} batches.")
+
+        return res
 
 ### BANGDATARESULT CLASS ###
 class BangDataResult():
