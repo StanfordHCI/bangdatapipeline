@@ -79,6 +79,14 @@ class BangDataPipeline():
             self.__set_survey_setting("FRACTURE_WHY_INDEX", index)
 
     ## REQUEST FUNCTIONS ##
+
+    def __valid(self, json):
+        """ given a batch json file, returns whether or not it was a completed valid batch """
+        try: 
+            return json['status'] == "completed" and json['currentRound'] == json['numRounds']
+        except: 
+            return False
+
     def fetch(self):
         """ public: fetch all recent batch metadata and display in table """
         # make request to server
@@ -99,7 +107,7 @@ class BangDataPipeline():
             columns=['batch_id', 'template', 'mask type', 'team format', 'team size', 'note'])
         i = 1
         for batch in batchlist_json['batchList']:
-            if batch['status'] == "completed":
+            if self.__valid(batch):
                 batches_df.loc[i] = [batch['_id'], batch['templateName'],
                                      batch['maskType'], '', batch['teamSize'], '']
                 if ('teamFormat' in batch):
@@ -378,6 +386,11 @@ class BangDataPipeline():
 
         # setup
         batch_json = self.get_json(batch_id)
+
+        if not self.__valid(batch_json):
+            print(f"{batch_id} was not a complete batch. skipping this one.")
+            return
+
         df = self.__batch_df(batch_json)
         t_df = self.__team_df(df)
         u_df = self.__user_df(df)
@@ -410,7 +423,10 @@ class BangDataPipeline():
 
     def analyze_all(self, batches: [str]):
         """ public analyze many batch ids at once """
-        return [self.analyze(batch) for batch in batches]
+        res = list(filter(None, [self.analyze(batch) for batch in batches]))
+
+        if self._verbose:
+            print(f"\nAnalyzed the valid {len(res)} out of {len(batches)} batches.")
 
 ### BANGDATARESULT CLASS ###
 class BangDataResult():
