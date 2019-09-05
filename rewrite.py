@@ -522,4 +522,97 @@ class BangDataResult():
     
     def __str__(self):
         return str(list(self._analyses.values()))
+
+### MULTIBATCH CLASS ###
+class Multibatch():
+    """ This class takes in a collection of BangDataRes objects and 
+    summarizes their results, creating figures, doing analyses etc. 
+    Whereas bangdatares operates at a batch level, this class operates
+    at an experimental level. """
+
+    def __init__(self, results: [BangDataResult], verbose=True):
+        self._verbose = verbose
+        self._raw_batches = results
+        self._filt_batches = results
+
+        # default filters filter out nothing
+        self._filters = []
+        
+        if verbose:
+            print(f"Initialized Multibatch engine to analyze {len(results)} batches")
+
+    ## MULTIBATCH SETTINGS ##
+    def set_verbose(self, val):
+        """ sets verbose flag to new value """
+        self._verbose = bool(val)
+
+        if self._verbose:
+            print(f"verbose was set to {val}.")
+
+    def set_batches(self, results: [BangDataResult]):
+        """ sets the raw pool of batches to new col """
+        old = self._raw_batches
+        self._raw_batches = results
+
+        if self._verbose:
+            print("updated batches.")
+            print(f"original # batches: {len(old)}, now: {len(results)}")
+
+    ## FILTERING ##
+    def set_filters(self, filters: [callable]):
+        """ set the filter functions  
+        the filtered functions provided should take in a bangdatares and return 
+        bools true to keep and false to filter out 
+        if bad inputs are passed in, will throw typeerrors """
+        old_val = self._filters
+        """ set the filter functions """
+        self._filters = filters
+
+        if self._verbose:
+            print(f"filter functions were updated. Old list was {old_val}", end=" ")
+            print(f". New list is {filters}")
     
+    def filter(self):
+        """ takes the batches saved in results and filters them
+        through the set filter functions. throws error if filter fails,
+        but filter rarely fails so more likely will just be wrong. """
+        if self._verbose:
+            print("\n>>> filtering batches. ensure that the functions take in a bangdatares obj and return a bool")
+
+        filt = self._raw_batches
+        for func in self._filters:
+            try:
+                filt = list(filter(func, filt))
+            except: 
+                print("Something went wrong. Set a new list of filter functions that take in a batchdatares and return a bool")
+        
+        self._filt_batches = filt
+
+        if self._verbose:
+            print("done filtering.")
+            print(f"original # batches: {len(self._raw_batches)}, now: {len(self._filt_batches)}")
+
+    ### SUMMARY TABLE ###
+    def __viability_scores(self, batch: BangDataResult):
+        """ extracts the difference in viabilities between ref, R, and D """
+        viability = batch.viability()
+        ref = batch.expRounds[0]
+        r = viability.iloc[ref-1]['v2=R'].item()
+        d = viability.iloc[ref-1]['v2=D'].item()
+        return [r,d]
+        
+
+    def __manipulation_scores(self, batch: BangDataResult):
+        """ extracts and calcs the expected and actual chances for manip """
+        return [0,0]
+
+    def summary(self):
+        """ prints a multibatch df that summarizes key results indexed by batch """
+        summary = pd.DataFrame(columns=["v2=R", "v2=D", "manip_actual", "manip_chance"])
+        i=1
+        for batch in self._filt_batches:
+            viability = self.__viability_scores(batch)
+            manip = self.__manipulation_scores(batch)
+            summary.loc[i] = [viability[0], viability[1], manip[0], manip[1]]
+            i += 1
+        return summary
