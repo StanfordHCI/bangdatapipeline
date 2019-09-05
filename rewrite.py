@@ -592,7 +592,7 @@ class Multibatch():
             print("done filtering.")
             print(f"original # batches: {len(self._raw_batches)}, now: {len(self._filt_batches)}")
 
-    ### SUMMARY TABLE ###
+    ## SUMMARY TABLE ##
     def __viability_scores(self, batch: BangDataResult):
         """ extracts the difference in viabilities between ref, R, and D """
         viability = batch.viability()
@@ -601,18 +601,17 @@ class Multibatch():
         d = viability.iloc[ref-1]['v2=D'].item()
         return [r,d]
         
-
     def __manipulation_scores(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
         return [0,0]
 
     def summary(self):
         """ prints a multibatch df that summarizes key results indexed by batch """
-        summary = pd.DataFrame(columns=["v2=R", "v2=D", "manip_actual", "manip_chance"])
+        summary = pd.DataFrame(columns=["batch", "v2=R", "v2=D", "manip_actual", "manip_chance"])
         i=1
         for batch in self._filt_batches:
             viability = self.__viability_scores(batch)
             manip = self.__manipulation_scores(batch)
-            summary.loc[i] = [viability[0], viability[1], manip[0], manip[1]]
+            summary.loc[i] = [batch.batch, viability[0], viability[1], manip[0], manip[1]]
             i += 1
         return summary
