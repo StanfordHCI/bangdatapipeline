@@ -446,18 +446,18 @@ class BangDataResult():
         self.expRounds = json['expRounds']
 
         ## PRIVATE FIELDS ##
-        self.__json = json
-        self.__raw_df = df
-        self.__team_df = t_df
-        self.__user_df = u_df
-        self.__analyses = {}
+        self._json = json
+        self._raw_df = df
+        self._team_df = t_df
+        self._user_df = u_df
+        self._analyses = {}
 
     ## SETTERS ##
     def set(self, key: str, team, ind=None):
         """ ideally not a public method """
-        self.__analyses[key + "_TEAM"] = team
+        self._analyses[key + "_TEAM"] = team
         if (ind is not None):
-            self.__analyses[key + "_IND"] = ind
+            self._analyses[key + "_IND"] = ind
 
     ## UTILS ##
     def combine(self, table1, table2):
@@ -483,38 +483,38 @@ class BangDataResult():
 
     ## GETTERS ##
     def json(self):
-        return self.__json
+        return self._json
 
     def raw_df(self):
-        return self.__raw_df
+        return self._raw_df
 
     def team_df(self):
-        return self.__team_df['user']
+        return self._team_df['user']
 
     def user_df(self):
-        return self.__user_df
+        return self._user_df
 
     def viability(self, ind=False):
         """ returns the viability table, default at team-level """
-        return self.__analyses["VIABILITY_IND"] if ind else self.__analyses["VIABILITY_TEAM"]
+        return self._analyses["VIABILITY_IND"] if ind else self._analyses["VIABILITY_TEAM"]
     
     def fracture(self, ind=False):
         """ returns the fracture table, default at team-level """
-        return self.__analyses["FRACTURE_IND"] if ind else self.__analyses["FRACTURE_TEAM"]
+        return self._analyses["FRACTURE_IND"] if ind else self._analyses["FRACTURE_TEAM"]
     
     def fracture_why(self, ind=False):
         """ returns the fracture table, default at team-level """
-        return self.__analyses["FRACTURE_WHY_IND"] if ind else self.__analyses["FRACTURE_WHY_TEAM"]
+        return self._analyses["FRACTURE_WHY_IND"] if ind else self._analyses["FRACTURE_WHY_TEAM"]
     
     def chat(self, ind=False):
         """ returns the chat composition table, default at team-level """
-        return self.__analyses["CHAT_IND"] if ind else self.__analyses["CHAT_TEAM"]
+        return self._analyses["CHAT_IND"] if ind else self._analyses["CHAT_TEAM"]
     
     def manipulation(self):
-        return self.__analyses["MANIPULATION_TEAM"]
+        return self._analyses["MANIPULATION_TEAM"]
 
     def display(self):
-        return list(self.__analyses.values())
+        return list(self._analyses.values())
     
     def __str__(self):
-        return str(list(self.__analyses.values()))
+        return str(list(self._analyses.values()))
