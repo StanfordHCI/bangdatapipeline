@@ -220,15 +220,8 @@ class BangDataPipeline():
         viability = t_df.apply(lambda team: team[:-1].apply(lambda userid: self.__ind_viability(
             self.__get_survey(u_df, team.name[0], userid)) if(userid == userid) else None), axis=1)
         # translation: across rows of t_df minus chat (so user ids), use the id and the round number (team.name[0]) to query ind_viability
-
-        # mean
+      
         viability['mean_viability'] = viability.mean(axis=1)
-
-        # get differences
-        final_viability = viability.tail(1)['mean_viability'].item()
-        viability['re_minus_ref'] = - \
-            (viability['mean_viability'] - final_viability)
-
         return viability
 
     def __analyze_viability_ind(self, u_df):
@@ -443,7 +436,7 @@ class BangDataResult():
         self.batch = batch_id
         self.users = u_df.index
         self.teams = t_df.index
-        self.expRounds = json['expRounds']
+        self.expRounds = sorted(json['expRounds'])
 
         ## PRIVATE FIELDS ##
         self._json = json
@@ -496,7 +489,18 @@ class BangDataResult():
 
     def viability(self, ind=False):
         """ returns the viability table, default at team-level """
-        return self._analyses["VIABILITY_IND"] if ind else self._analyses["VIABILITY_TEAM"]
+        viability =  self._analyses["VIABILITY_IND"] if ind else self._analyses["VIABILITY_TEAM"]
+        
+        # get diffs here
+        reconvene = self.expRounds[1]
+        control = len(viability.index) - (reconvene == len(viability.index))
+
+        viability['v2=R'] = - \
+            (viability['mean_viability'] - viability.iloc[reconvene-1]['mean_viability'].item())
+        viability['v2=D'] = - \
+            (viability['mean_viability'] - viability.iloc[control-1]['mean_viability'].item())
+
+        return viability
     
     def fracture(self, ind=False):
         """ returns the fracture table, default at team-level """
@@ -518,3 +522,4 @@ class BangDataResult():
     
     def __str__(self):
         return str(list(self._analyses.values()))
+    
