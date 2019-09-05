@@ -534,6 +534,7 @@ class Multibatch():
         self._verbose = verbose
         self._raw_batches = results
         self._filt_batches = results
+        self.summary = None
 
         # default filters filter out nothing
         self._filters = []
@@ -593,7 +594,7 @@ class Multibatch():
             print(f"original # batches: {len(self._raw_batches)}, now: {len(self._filt_batches)}")
 
     ## SUMMARY TABLE ##
-    def __viability_scores(self, batch: BangDataResult):
+    def __batch_viabilities(self, batch: BangDataResult):
         """ extracts the difference in viabilities between ref, R, and D """
         viability = batch.viability()
         ref = batch.expRounds[0]
@@ -601,17 +602,45 @@ class Multibatch():
         d = viability.iloc[ref-1]['v2=D'].item()
         return [r,d]
         
-    def __manipulation_scores(self, batch: BangDataResult):
+    def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
         return [0,0]
 
-    def summary(self):
+    def summarize(self):
         """ prints a multibatch df that summarizes key results indexed by batch """
+        if self._verbose:
+            print(">>> Summarizing")
+        
         summary = pd.DataFrame(columns=["batch", "v2=R", "v2=D", "manip_actual", "manip_chance"])
         i=1
         for batch in self._filt_batches:
-            viability = self.__viability_scores(batch)
-            manip = self.__manipulation_scores(batch)
+            viability = self.__batch_viabilities(batch)
+            manip = self.__batch_manipulations(batch)
             summary.loc[i] = [batch.batch, viability[0], viability[1], manip[0], manip[1]]
             i += 1
+        self.summary = summary
         return summary
+
+    ## ANALYSES ##
+    def describe(self):
+        """ makes a call to self.summary and describes major numbers """
+        # error checking
+        if self.summary is None:
+            print("You must run .summarize() before running this function")
+
+        if self._verbose:
+            print(">>> Describing last summary")
+
+        # viabilities
+        print("\nThe difference in V2 - V1 when V2 was R (reconvening) had these stats:")
+        print(self.summary['v2=R'].describe()[:3])
+        
+        print("\nThe difference in V2 - V1 when V2 was D (control) had these stats:")
+        print(self.summary['v2=D'].describe()[:3])
+
+        # manipulation
+        print("\nThe actual manipulation check accuracy had these stats:")
+        print(self.summary['manip_actual'].describe()[:3])
+        
+        print("\nThe chance manipulation check accuracy had these stats:")
+        print(self.summary['manip_chance'].describe()[:3])
