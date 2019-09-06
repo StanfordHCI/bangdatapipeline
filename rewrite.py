@@ -647,8 +647,8 @@ class Multibatch():
         2. prints v2=D/W mean, std
         3. prints bar plot of v2=R/B, v2=D/W means + std error
         4. prints box plot of v2=R/B, v2=D/W 
-        5. prints paired t-test results for manip_acutal and manip_chance
-        returns dict with items above """
+        5. prints paired t-test results for manip_acutal and manip_chance 
+        returns nothing """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
@@ -692,7 +692,7 @@ class Multibatch():
         2. prints manip_chancen mean, std
         3. prints plot with mean manip_chance bar + standard error, line for manip_actual
         4. prints paired t-test results for manip_acutal and manip_chance
-        returns dict with items above """
+        returns nothing """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
