@@ -439,8 +439,13 @@ class BangDataResult():
         self.batch = batch_id
         self.users = u_df.index
         self.teams = t_df.index
-        self.expRounds = sorted(json['expRounds'])
-
+        self.numRounds = json['numRounds']
+        self.refPair1 = sorted(json['expRounds']) # always [ref, reconvene]
+        self.refPair2 = sorted(json['expRounds2']) if 'expRounds2' in json \
+            else [self.refPair1[0], self.numRounds - (self.refPair1[1] == self.numRounds)]
+            # will either be [ref2, reconvene2] or [ref, control]
+        self.labels = ["reconvene", "control"] if self.refPair1[0] == self.refPair2[0] else ["best", "worst"]
+        
         ## PRIVATE FIELDS ##
         self._json = json
         self._raw_df = df
@@ -491,17 +496,15 @@ class BangDataResult():
         return self._user_df
 
     def viability(self, ind=False):
-        """ returns the viability table, default at team-level """
+        """ returns the viability table, default at team-level, with added diff columns """
         viability =  self._analyses["VIABILITY_IND"] if ind else self._analyses["VIABILITY_TEAM"]
+        if ind: return viability
         
-        # get diffs here
-        reconvene = self.expRounds[1]
-        control = len(viability.index) - (reconvene == len(viability.index))
-
-        viability['v2=R'] = - \
-            (viability['mean_viability'] - viability.iloc[reconvene-1]['mean_viability'].item())
-        viability['v2=D'] = - \
-            (viability['mean_viability'] - viability.iloc[control-1]['mean_viability'].item())
+        # get diffs here, team only
+        viability[self.labels[0]] = - \
+            (viability['mean_viability'] - viability.iloc[self.refPair1[1]-1]['mean_viability'].item())
+        viability[self.labels[1]] = - \
+            (viability['mean_viability'] - viability.iloc[self.refPair2[1]-1]['mean_viability'].item())
 
         return viability
     
@@ -538,6 +541,7 @@ class Multibatch():
         self._raw_batches = results
         self._filt_batches = results
         self.summary = None
+        self.viability_labels = results[0].labels # assume all are same toggle #427
 
         # default filters filter out nothing
         self._filters = []
@@ -600,9 +604,9 @@ class Multibatch():
     def __batch_viabilities(self, batch: BangDataResult):
         """ extracts the difference in viabilities between ref, R, and D """
         viability = batch.viability()
-        ref = batch.expRounds[0]
-        r = viability.iloc[ref-1]['v2=R'].item()
-        d = viability.iloc[ref-1]['v2=D'].item()
+        refs = [batch.refPair1[0], batch.refPair2[0]]
+        r = viability.iloc[refs[0]-1][self.viability_labels[0]].item()
+        d = viability.iloc[refs[1]-1][self.viability_labels[1]].item()
         return [r,d]
         
     def __batch_manipulations(self, batch: BangDataResult):
@@ -614,7 +618,8 @@ class Multibatch():
         if self._verbose:
             print(">>> Summarizing")
         
-        summary = pd.DataFrame(columns=["batch", "v2=R", "v2=D", "manip_actual", "manip_chance"])
+        summary = pd.DataFrame(columns=["batch", self.viability_labels[0], self.viability_labels[1], \
+            "manip_actual", "manip_chance"])
         i=1
         for batch in self._filt_batches:
             viability = self.__batch_viabilities(batch)
@@ -638,32 +643,32 @@ class Multibatch():
     ## ANALYSES ##
     def analyze_viability(self):
         """ performs all viability diff analyses across batches (section Rb)
-        1. prints v2=R mean, std
-        2. prints v2=D mean, std
-        3. prints bar plot of v2=R, v2=D means + std error
-        4. prints box plot of v2=R, v2=D 
+        1. prints v2=R/B mean, std
+        2. prints v2=D/W mean, std
+        3. prints bar plot of v2=R/B, v2=D/W means + std error
+        4. prints box plot of v2=R/B, v2=D/W 
         5. prints paired t-test results for manip_acutal and manip_chance
         returns dict with items above """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
 
-        r = self.summary['v2=R']
-        d = self.summary['v2=D']
+        r = self.summary[self.viability_labels[0]]
+        d = self.summary[self.viability_labels[1]]
         
         # 1. print manip_actual mean, std
-        print("\n>>> v2=R mean, standard deviation:")
+        print(f"\n>>> {self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r.count()}, mean: {r.mean()}, std: {r.std()}")
 
         # 2. print manip_chance mean, std
-        print("\n>>> v2=D mean, standard deviation:")
+        print(f"\n>>> {self.viability_labels[1]} mean, standard deviation:")
         print(f"n: {d.count()}, mean: {d.mean()}, std: {d.std()}")
 
         # 3. create barplot
         print("\n>>> barplot:")
         bar = plt.bar(np.arange(2), [r.mean(), d.mean()], yerr=[r.std(), d.std()], align='center')
-        plt.title('Viability Diff (V2 - V1) Between Reconvene and Control')
-        plt.xticks(np.arange(2), ['V2=R', 'V2=D'])
+        plt.title(f'Viability Diffs Between {self.viability_labels[0]} and {self.viability_labels[1]}')
+        plt.xticks(np.arange(2), [self.viability_labels[0], self.viability_labels[1]])
         plt.xlabel('V2')
         plt.ylabel('Growth in Viability from Reference Round')
         plt.show()
@@ -671,14 +676,14 @@ class Multibatch():
         #4. create boxplot
         print("\n>>> boxplot:")
         box = plt.boxplot([r, d], positions=np.arange(2))
-        plt.title('Viability Diff (V2 - V1) Between Reconvene and Control')
-        plt.xticks(np.arange(2), ['V2=R', 'V2=D'])
+        plt.title(f'Viability Diffs Between {self.viability_labels[0]} and {self.viability_labels[1]}')
+        plt.xticks(np.arange(2), [self.viability_labels[0], self.viability_labels[1]])
         plt.xlabel('V2')
         plt.ylabel('Growth in Viability from Reference Round')
         plt.show()
 
         # 5. paired t-test
-        print("\n>>> paired t-test between v2=R and v2=D:")
+        print(f"\n>>> paired t-test between {self.viability_labels[0]} and {self.viability_labels[1]}:")
         print(stats.ttest_rel(r, d))
 
     def analyze_manipulation(self):
