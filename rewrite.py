@@ -710,7 +710,8 @@ class Multibatch():
         plt.xticks(np.arange(1), '')
         plt.xlabel('Chance Accuracy')
         plt.ylabel('Accuracy')
-        plt.axhline(y=actual.mean(),linewidth=1,label="Actual Accuracy") #threshold line
+        plt.ylim(bottom=0)
+        plt.axhline(y=actual.mean(),linewidth=2,label="Actual Accuracy") #threshold line
         plt.legend()
         plt.show()
 
