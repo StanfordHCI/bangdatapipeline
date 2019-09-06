@@ -10,6 +10,9 @@ import requests
 import json
 from json import loads
 import pandas as pd
+from scipy import stats
+import numpy as np
+import matplotlib.pyplot as plt
 pd.set_option('display.max_colwidth', -1)
 
 __version__ = "0.1.0"
@@ -621,26 +624,96 @@ class Multibatch():
         self.summary = summary
         return summary
 
-    ## ANALYSES ##
     def describe(self):
-        """ makes a call to self.summary and describes major numbers """
+        """ describes all the columns in self.summary """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
 
         if self._verbose:
-            print(">>> Describing last summary")
+            print(">>> Describing last summary\n")
 
-        # viabilities
-        print("\nThe difference in V2 - V1 when V2 was R (reconvening) had these stats:")
-        print(self.summary['v2=R'].describe()[:3])
-        
-        print("\nThe difference in V2 - V1 when V2 was D (control) had these stats:")
-        print(self.summary['v2=D'].describe()[:3])
+        return self.summary.describe()
 
-        # manipulation
-        print("\nThe actual manipulation check accuracy had these stats:")
-        print(self.summary['manip_actual'].describe()[:3])
+    ## ANALYSES ##
+    def analyze_viability(self):
+        """ performs all viability diff analyses across batches (section Rb)
+        1. prints v2=R mean, std
+        2. prints v2=D mean, std
+        3. prints bar plot of v2=R, v2=D means + std error
+        4. prints box plot of v2=R, v2=D 
+        5. prints paired t-test results for manip_acutal and manip_chance
+        returns dict with items above """
+        # error checking
+        if self.summary is None:
+            print("You must run .summarize() before running this function")
+
+        r = self.summary['v2=R']
+        d = self.summary['v2=D']
         
-        print("\nThe chance manipulation check accuracy had these stats:")
-        print(self.summary['manip_chance'].describe()[:3])
+        # 1. print manip_actual mean, std
+        print("\n>>> v2=R mean, standard deviation:")
+        print(f"n: {r.count()}, mean: {r.mean()}, std: {r.std()}")
+
+        # 2. print manip_chance mean, std
+        print("\n>>> v2=D mean, standard deviation:")
+        print(f"n: {d.count()}, mean: {d.mean()}, std: {d.std()}")
+
+        # 3. create barplot
+        print("\n>>> barplot:")
+        bar = plt.bar(np.arange(2), [r.mean(), d.mean()], yerr=[r.std(), d.std()], align='center')
+        plt.title('Viability Diff (V2 - V1) Between Reconvene and Control')
+        plt.xticks(np.arange(2), ['V2=R', 'V2=D'])
+        plt.xlabel('V2')
+        plt.ylabel('Growth in Viability from Reference Round')
+        plt.show()
+
+        #4. create boxplot
+        print("\n>>> boxplot:")
+        box = plt.boxplot([r, d], positions=np.arange(2))
+        plt.title('Viability Diff (V2 - V1) Between Reconvene and Control')
+        plt.xticks(np.arange(2), ['V2=R', 'V2=D'])
+        plt.xlabel('V2')
+        plt.ylabel('Growth in Viability from Reference Round')
+        plt.show()
+
+        # 5. paired t-test
+        print("\n>>> paired t-test between v2=R and v2=D:")
+        print(stats.ttest_rel(r, d))
+
+    def analyze_manipulation(self):
+        """ performs all manipulation check analyses across batches (section Ra)
+        1. prints manip_acutal mean, std
+        2. prints manip_chancen mean, std
+        3. prints plot with mean manip_chance bar + standard error, line for manip_actual
+        4. prints paired t-test results for manip_acutal and manip_chance
+        returns dict with items above """
+        # error checking
+        if self.summary is None:
+            print("You must run .summarize() before running this function")
+
+        actual = self.summary['manip_actual']
+        chance = self.summary['manip_chance']
+        
+        # 1. print manip_actual mean, std
+        print("\n>>> manip_actual mean, standard deviation:")
+        print(f"n: {actual.count()}, mean: {actual.mean()}, std: {actual.std()}")
+
+        # 2. print manip_chance mean, std
+        print("\n>>> manip_chance mean, standard deviation:")
+        print(f"n: {chance.count()}, mean: {chance.mean()}, std: {chance.std()}")
+
+        # 3. create barplot
+        print("\n>>> barplot:")
+        bar = plt.bar(np.arange(1), chance.mean(), yerr=chance.std(), align='center')
+        plt.title('Manipulation Check Accuracy')
+        plt.xticks(np.arange(1), '')
+        plt.xlabel('Chance Accuracy')
+        plt.ylabel('Accuracy')
+        plt.axhline(y=actual.mean(),linewidth=1,label="Actual Accuracy") #threshold line
+        plt.legend()
+        plt.show()
+
+        # 4. paired t-test
+        print("\n>>> paired t-test between manip_acutal and manip_chance:")
+        print(stats.ttest_rel(actual, chance))
