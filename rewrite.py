@@ -613,8 +613,10 @@ class Multibatch():
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
         manip = batch.manipulation()
-        act = manip.apply(lambda u: int(u['correct']) / u['numOptions'], axis=1).mean()
-        exp = manip.apply(lambda u: 1 / u['numOptions'], axis=1).mean()
+        act = manip.apply(lambda u: int(u['correct']) / u['numOptions'] \
+            if u['numOptions'] is not None else None, axis=1).mean()
+        exp = manip.apply(lambda u: 1 / u['numOptions'] \
+            if u['numOptions'] is not None else None, axis=1).mean()
 
         return [act,exp]
 
