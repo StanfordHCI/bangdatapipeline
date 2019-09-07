@@ -6,6 +6,12 @@
 Welcome to Bang Data Pipeline's documentation!
 ==============================================
 
+.. automodule:: pymap3d
+  :members:
+
+.. automodule:: pymap3d.vincenty
+  :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
