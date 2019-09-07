@@ -315,7 +315,7 @@ class BangDataPipeline():
         for user in raw['users']:
             user_id = user['user']['_id']
             if('survey' not in user or 'singleTeamQuestion' not in user['survey']):
-                m_df.loc[i] = [user_id, None, None]
+                m_df.loc[i] = [user_id, None, None, None]
             else:
                 guessed = user['survey']['singleTeamQuestion']['chosenPartnerName']
                 actual = user['survey']['singleTeamQuestion']['actualPartnerName']
