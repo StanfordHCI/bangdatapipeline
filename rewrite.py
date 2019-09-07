@@ -215,8 +215,9 @@ class BangDataPipeline():
         sum_viability = 0
         for i in range(self._survey_settings["VIABILITY_START"], self._survey_settings["VIABILITY_END"] + 1):
             sum_viability += int(survey[i]['result'])
-
-        return sum_viability if sum_viability != 0 else None #min is 1pt per question so cannot be 0
+        
+        len_viability = self._survey_settings["VIABILITY_END"] - self._survey_settings["VIABILITY_START"]
+        return sum_viability if sum_viability > len_viability else None #min is 1pt per question so cannot be 0
 
     def __analyze_viability_team(self, u_df, t_df):
         """ get team-indexed viability scores with average and diff """
