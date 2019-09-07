@@ -355,7 +355,7 @@ class BangDataPipeline():
         msg_df = msg_df.apply(lambda m: pd.to_numeric(m, errors="coerce")).astype(
             pd.Int32Dtype())  # convert to float
         msg_df = msg_df.fillna(0) # fill in missing users with 0
-        msg_df = msg_df.apply(lambda r: r.div(r.sum()), axis=1)  # convert to %
+        msg_df = msg_df.apply(lambda r: r.div(r.sum()) if r.sum != 0 else 0, axis=1)  # convert to %
         return msg_df
 
     def __analyze_chat_ind(self, u_df, t_df):
