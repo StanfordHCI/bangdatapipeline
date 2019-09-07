@@ -310,7 +310,7 @@ class BangDataPipeline():
         """ get manipulation check answer. for old single team format """
 
         # build up a manipulation df m_df from scratch, with columns user, guess1, guess2, and reasoning
-        m_df = pd.DataFrame(columns=['user', 'guessedName', 'actualName'])
+        m_df = pd.DataFrame(columns=['user', 'guessedName', 'actualName', 'numOptions'])
         i = 1
         for user in raw['users']:
             user_id = user['user']['_id']
@@ -319,7 +319,8 @@ class BangDataPipeline():
             else:
                 guessed = user['survey']['singleTeamQuestion']['chosenPartnerName']
                 actual = user['survey']['singleTeamQuestion']['actualPartnerName']
-                m_df.loc[i] = [user_id, guessed, actual]
+                num = user['survey']['singleTeamQuestion']['numOptions']
+                m_df.loc[i] = [user_id, guessed, actual, num]
             i += 1
 
         # fill in extra column with whether they were correct
@@ -611,7 +612,11 @@ class Multibatch():
         
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
-        return [0,0]
+        manip = batch.manipulation()
+        act = manip.apply(lambda u: int(u['correct']) / u['numOptions'], axis=1).mean()
+        exp = manip.apply(lambda u: 1 / u['numOptions'], axis=1).mean()
+
+        return [act,exp]
 
     def summarize(self):
         """ prints a multibatch df that summarizes key results indexed by batch """
