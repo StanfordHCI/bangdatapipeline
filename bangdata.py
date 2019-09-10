@@ -627,12 +627,13 @@ class Multibatch():
             print(">>> Summarizing")
         
         summary = pd.DataFrame(columns=["batch", self.viability_labels[0], self.viability_labels[1], \
-            "manip_actual", "manip_chance"])
+            "manip_actual", "manip_chance", "refPair1", "refPair2"])
         i=1
         for batch in self._filt_batches:
             viability = self.__batch_viabilities(batch)
             manip = self.__batch_manipulations(batch)
-            summary.loc[i] = [batch.batch, viability[0], viability[1], manip[0], manip[1]]
+            summary.loc[i] = [batch.batch, viability[0], viability[1], manip[0], manip[1], \
+                batch.refPair1, batch.refPair2]
             i += 1
         self.summary = summary
         return summary
