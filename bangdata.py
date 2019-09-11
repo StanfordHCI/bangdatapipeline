@@ -662,7 +662,7 @@ class Multibatch():
     def analyze_viability(self):
         """ wrapper function to set default viability analysis type based on whether 
         this is 1) rec/cont or 2) best/worst """
-        if self.viability_labels == ['recovene', 'control']:
+        if self.viability_labels == ['reconvene', 'control']:
             return self.analyze_viability_diff()
         else:
             return self.analyze_viability_raw()
