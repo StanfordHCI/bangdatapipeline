@@ -443,7 +443,7 @@ class BangDataResult():
         self.teams = t_df.index
         self.numRounds = json['numRounds']
         self.refPair1 = sorted(json['expRounds']) # always [ref, reconvene]
-        self.refPair2 = sorted(json['worstRounds']) if 'worstRounds' in json \
+        self.refPair2 = sorted(json['worstRounds']) if 'worstRounds' in json and len(json['worstRounds']) != 0 \
             else [self.refPair1[0], self.numRounds - (self.refPair1[1] == self.numRounds)]
             # will either be [ref2, reconvene2] or [ref, control]
         self.labels = ["reconvene", "control"] if self.refPair1[0] == self.refPair2[0] else ["best", "worst"]
