@@ -604,12 +604,20 @@ class Multibatch():
 
     ## SUMMARY TABLE ##
     def __batch_viabilities(self, batch: BangDataResult):
-        """ extracts the difference in viabilities between ref, R, and D """
+        """ extracts the viabilitys for the two refpairs, and the diffs between them """
         viability = batch.viability()
-        refs = [batch.refPair1[0], batch.refPair2[0]]
-        r = viability.iloc[refs[0]-1][self.viability_labels[0]].item()
-        d = viability.iloc[refs[1]-1][self.viability_labels[1]].item()
-        return [r,d]
+
+        # get scores for the first pair of refs and their diff
+        r1 = viability.iloc[batch.refPair1[0]-1]['mean_viability'].item()
+        r2 = viability.iloc[batch.refPair1[1]-1]['mean_viability'].item()
+        rd = viability.iloc[batch.refPair1[0]-1][self.viability_labels[0]].item()
+
+        # get scores for the second pair of refs and their diff
+        d1 = viability.iloc[batch.refPair2[0]-1]['mean_viability'].item()
+        d2 = viability.iloc[batch.refPair2[1]-1]['mean_viability'].item()
+        dd = viability.iloc[batch.refPair2[0]-1][self.viability_labels[1]].item()
+
+        return [r1, r2, rd, d1, d2, dd]
         
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
@@ -626,14 +634,15 @@ class Multibatch():
         if self._verbose:
             print(">>> Summarizing")
         
-        summary = pd.DataFrame(columns=["batch", self.viability_labels[0], self.viability_labels[1], \
-            "manip_actual", "manip_chance", "refPair1", "refPair2"])
+        summary = pd.DataFrame(columns=["batch", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
+            "diff_" + self.viability_labels[0], "initial_" + self.viability_labels[1], "later_" + self.viability_labels[1], \
+            "diff_" + self.viability_labels[1], "manip_actual", "manip_chance", "refPair1", "refPair2"])
         i=1
         for batch in self._filt_batches:
             viability = self.__batch_viabilities(batch)
             manip = self.__batch_manipulations(batch)
-            summary.loc[i] = [batch.batch, viability[0], viability[1], manip[0], manip[1], \
-                batch.refPair1, batch.refPair2]
+            summary.loc[i] = [batch.batch, viability[0], viability[1], viability[2], viability[3], viability[4], viability[5], \
+                manip[0], manip[1], batch.refPair1, batch.refPair2]
             i += 1
         self.summary = summary
         return summary
@@ -651,26 +660,34 @@ class Multibatch():
 
     ## ANALYSES ##
     def analyze_viability(self):
+        """ wrapper function to set default viability analysis type based on whether 
+        this is 1) rec/cont or 2) best/worst """
+        if self.viability_labels == ['recovene', 'control']:
+            return self.analyze_viability_diff()
+        else:
+            return self.analyze_viability_raw()
+            
+    def analyze_viability_diff(self):
         """ performs all viability diff analyses across batches (section Rb)
         1. prints v2=R/B mean, std
         2. prints v2=D/W mean, std
         3. prints bar plot of v2=R/B, v2=D/W means + std error
         4. prints box plot of v2=R/B, v2=D/W 
-        5. prints paired t-test results for manip_acutal and manip_chance 
+        5. prints paired t-test results for diffs between v2=R/B and v2=D/W
         returns nothing """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
 
-        r = self.summary[self.viability_labels[0]]
-        d = self.summary[self.viability_labels[1]]
+        r = self.summary["diff_" + self.viability_labels[0]]
+        d = self.summary["diff_" + self.viability_labels[1]]
         
-        # 1. print manip_actual mean, std
-        print(f"\n>>> {self.viability_labels[0]} mean, standard deviation:")
+        # 1. print r_diff mean, std
+        print(f"\n>>> diff_{self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r.count()}, mean: {r.mean()}, std: {r.std()}")
 
-        # 2. print manip_chance mean, std
-        print(f"\n>>> {self.viability_labels[1]} mean, standard deviation:")
+        # 2. print d_diff mean, std
+        print(f"\n>>> diff_{self.viability_labels[1]} mean, standard deviation:")
         print(f"n: {d.count()}, mean: {d.mean()}, std: {d.std()}")
 
         # 3. create barplot
@@ -692,8 +709,76 @@ class Multibatch():
         plt.show()
 
         # 5. paired t-test
-        print(f"\n>>> paired t-test between {self.viability_labels[0]} and {self.viability_labels[1]}:")
+        print(f"\n>>> paired t-test between diff_{self.viability_labels[0]} and diff_{self.viability_labels[1]}:")
         print(stats.ttest_rel(r, d))
+
+    def analyze_viability_raw(self):
+        """ performs all raw viability score analyses across batches (section Rb split)
+        1. prints refPair1[0] mean, std
+        2. prints refPair1[1] mean, std
+        3. prints refPair2[0] mean, std
+        4. prints refPair2[1] mean, std
+        5. prints bar plot of v2=R/B, v2=D/W means + std error
+        6. prints box plot of v2=R/B, v2=D/W 
+        7. prints paired t-test results for initial scores R/B vs D/W
+        8. prints paired t-test results for later scores R/B vs D/W  
+        returns nothing """
+        # error checking
+        if self.summary is None:
+            print("You must run .summarize() before running this function")
+
+        r1 = self.summary["initial_" + self.viability_labels[0]]
+        r2 = self.summary["later_" + self.viability_labels[0]]
+        d1 = self.summary["initial_" + self.viability_labels[1]]
+        d2 = self.summary["later_" + self.viability_labels[1]]
+        
+        # 1. print r1 mean, std
+        print(f"\n>>> initial_{self.viability_labels[0]} mean, standard deviation:")
+        print(f"n: {r1.count()}, mean: {r1.mean()}, std: {r1.std()}")
+
+        # 2. print r2 mean, std
+        print(f"\n>>> later_{self.viability_labels[0]} mean, standard deviation:")
+        print(f"n: {r2.count()}, mean: {r2.mean()}, std: {r2.std()}")
+
+        # 3. print d1 mean, std
+        print(f"\n>>> initial_{self.viability_labels[1]} mean, standard deviation:")
+        print(f"n: {d1.count()}, mean: {d1.mean()}, std: {d1.std()}")
+
+        # 4. print d2 mean, std
+        print(f"\n>>> later_{self.viability_labels[1]} mean, standard deviation:")
+        print(f"n: {d2.count()}, mean: {d2.mean()}, std: {d2.std()}")
+
+        # 5. create barplot
+        print("\n>>> barplot:")
+        bar = plt.bar(np.arange(4), [r1.mean(), r2.mean(), d1.mean(), d2.mean()], yerr=[r1.std(), r2.std(), d1.std(), d2.std()], align='center')
+        plt.title(f'Viabilities of {self.viability_labels[0]} and {self.viability_labels[1]}')
+        plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
+            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+        plt.xlabel('Round')
+        plt.ylabel('Raw Viabilities')
+        plt.plot([0,1], [r1.mean(), r2.mean()], c="r", lw=2)
+        plt.plot([2,3], [d1.mean(), d2.mean()], c="r", lw=2)
+        plt.show()
+
+        # 6. create boxplot
+        print("\n>>> boxplot:")
+        box = plt.boxplot([r1, r2, d1, d2], positions=np.arange(4))
+        plt.title(f'Viabilies of {self.viability_labels[0]} and {self.viability_labels[1]}')
+        plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
+            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+        plt.xlabel('Round')
+        plt.ylabel('Raw Viabilities')
+        plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
+        plt.plot([2,3], [d1.median(), d2.median()], c="r", lw=2)
+        plt.show()
+
+        # 7. paired t-test initial
+        print(f"\n>>> paired t-test between initial_{self.viability_labels[0]} and initial_{self.viability_labels[1]}:")
+        print(stats.ttest_rel(r1, d1))
+
+        # 8. paired t-test later
+        print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
+        print(stats.ttest_rel(r2, d2))
 
     def analyze_manipulation(self):
         """ performs all manipulation check analyses across batches (section Ra)
