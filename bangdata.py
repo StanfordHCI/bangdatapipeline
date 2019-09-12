@@ -804,13 +804,13 @@ class Multibatch():
 
         # 3. create barplot
         print("\n>>> barplot:")
-        bar = plt.bar(np.arange(1), chance.mean(), yerr=chance.std(), align='center')
+        bar = plt.bar(np.arange(1), actual.mean(), yerr=actual.std(), align='center')
         plt.title('Manipulation Check Accuracy')
         plt.xticks(np.arange(1), '')
-        plt.xlabel('Chance Accuracy')
+        plt.xlabel('Actual Accuracy')
         plt.ylabel('Accuracy')
-        plt.ylim(bottom=0)
-        plt.axhline(y=actual.mean(),linewidth=2,label="Actual Accuracy") #threshold line
+        plt.ylim(bottom=0, top=chance.mean()+0.1)
+        plt.axhline(y=chance.mean(),linewidth=2,label="Chance Accuracy") #threshold line
         plt.legend()
         plt.show()
 
