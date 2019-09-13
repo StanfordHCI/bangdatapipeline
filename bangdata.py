@@ -788,7 +788,7 @@ class Multibatch():
         print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
         print(stats.ttest_rel(r2, d2))
 
-    def analyze_viability_all(self):
+    def viability_all(self):
         """ boxplots all round viabilities just by raw round # """
         # get all rounds viabilities data
         num_rounds = self._filt_batches[0].numRounds
