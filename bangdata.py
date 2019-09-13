@@ -788,6 +788,44 @@ class Multibatch():
         print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
         print(stats.ttest_rel(r2, d2))
 
+    def analyze_viability_all(self):
+        """ boxplots all round viabilities just by raw round # """
+        # get all rounds viabilities data
+        num_rounds = self._filt_batches[0].numRounds
+        viabs = pd.DataFrame(columns=["batch", *list(range(1, num_rounds+1)), "refPair1", "refPair2"])
+        i=1
+        for batch in self._filt_batches:
+            viability = batch.viability()['mean_viability']
+            viabs.loc[i] = [batch.batch, *viability, batch.refPair1, batch.refPair2]
+            i += 1
+        
+        print(viabs.describe())
+        boxplot = viabs.boxplot()
+        return boxplot
+
+    def viability_single_val(self):
+        """ boxplots the value later reconvene - later control """
+        # error checking
+        if self.summary is None:
+            print("You must run .summarize() before running this function")
+
+        r = self.summary["later_" + self.viability_labels[0]]
+        d = self.summary["later_" + self.viability_labels[1]]
+        s = r-d
+        
+        # 1. print r1 mean, std
+        print(f"\n>>> single value later {self.viability_labels[0]} - {self.viability_labels[1]} mean, standard deviation:")
+        print(f"n: {s.count()}, mean: {s.mean()}, std: {s.std()}")
+
+        # 2. boxplot
+        print("\n>>> boxplot:")
+        box = plt.boxplot(s, positions=np.arange(1))
+        plt.title(f'Single value later {self.viability_labels[0]} - {self.viability_labels[1]}')
+        plt.xticks(np.arange(1), ["Single Value"])
+        plt.xlabel('')
+        plt.ylabel('Raw Viabilities')
+        plt.show()
+
     def analyze_manipulation(self):
         """ performs all manipulation check analyses across batches (section Ra)
         1. prints manip_acutal mean, std
