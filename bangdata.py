@@ -497,11 +497,19 @@ class BangDataResult():
     def user_df(self):
         return self._user_df
 
-    def viability(self, ind=False):
+    def viability(self, ind=False, block=False):
         """ returns the viability table, default at team-level, with added diff columns """
-        viability =  self._analyses["VIABILITY_IND"] if ind else self._analyses["VIABILITY_TEAM"]
+        viability =  self._analyses["VIABILITY_IND"].copy() if ind \
+            else self._analyses["VIABILITY_TEAM"].copy(deep=True)
         if ind: return viability
-        
+
+        # enforce block (kick out people who missed a survey at any point)
+        if block:
+            # set to none to kick out people who missed a survey
+            viability['user'] = viability['user'].apply(lambda u: u if u.count() == self.numRounds \
+                else [None] * self.numRounds, axis=0)
+            viability['mean_viability'] = viability['user'].mean(axis=1)
+
         # get diffs here, team only
         viability[self.labels[0]] = - \
             (viability['mean_viability'] - viability.iloc[self.refPair1[1]-1]['mean_viability'].item())
@@ -603,9 +611,9 @@ class Multibatch():
             print(f"original # batches: {len(self._raw_batches)}, now: {len(self._filt_batches)}")
 
     ## SUMMARY TABLE ##
-    def __batch_viabilities(self, batch: BangDataResult):
+    def __batch_viabilities(self, batch: BangDataResult, block):
         """ extracts the viabilitys for the two refpairs, and the diffs between them """
-        viability = batch.viability()
+        viability = batch.viability(block=block)
 
         # get scores for the first pair of refs and their diff
         r1 = viability.iloc[batch.refPair1[0]-1]['mean_viability'].item()
@@ -629,7 +637,7 @@ class Multibatch():
 
         return [act,exp]
 
-    def summarize(self):
+    def summarize(self, block=False):
         """ prints a multibatch df that summarizes key results indexed by batch """
         if self._verbose:
             print(">>> Summarizing")
@@ -639,7 +647,7 @@ class Multibatch():
             "diff_" + self.viability_labels[1], "manip_actual", "manip_chance", "refPair1", "refPair2"])
         i=1
         for batch in self._filt_batches:
-            viability = self.__batch_viabilities(batch)
+            viability = self.__batch_viabilities(batch, block)
             manip = self.__batch_manipulations(batch)
             summary.loc[i] = [batch.batch, viability[0], viability[1], viability[2], viability[3], viability[4], viability[5], \
                 manip[0], manip[1], batch.refPair1, batch.refPair2]
