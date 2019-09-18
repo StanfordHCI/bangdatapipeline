@@ -788,7 +788,7 @@ class Multibatch():
         print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
         print(stats.ttest_rel(r2, d2))
 
-    def viability_all(self):
+    def analyze_viability_all(self):
         """ boxplots all round viabilities just by raw round # """
         # get all rounds viabilities data
         num_rounds = self._filt_batches[0].numRounds
@@ -803,7 +803,7 @@ class Multibatch():
         boxplot = viabs.boxplot()
         return boxplot
 
-    def viability_single_val(self):
+    def analyze_viability_single(self):
         """ boxplots the value later reconvene - later control """
         # error checking
         if self.summary is None:
@@ -817,7 +817,11 @@ class Multibatch():
         print(f"\n>>> single value later {self.viability_labels[0]} - {self.viability_labels[1]} mean, standard deviation:")
         print(f"n: {s.count()}, mean: {s.mean()}, std: {s.std()}")
 
-        # 2. boxplot
+        # 2. describe
+        print(">>> single value desc")
+        print(s.describe())
+
+        # 3. boxplot
         print("\n>>> boxplot:")
         box = plt.boxplot(s, positions=np.arange(1))
         plt.title(f'Single value later {self.viability_labels[0]} - {self.viability_labels[1]}')
