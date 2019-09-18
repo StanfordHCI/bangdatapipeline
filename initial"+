@@ -721,7 +721,7 @@ class Multibatch():
         bar = plt.bar(np.arange(4), [r1.mean(), r2.mean(), d1.mean(), d2.mean()], yerr=[r1.std(), r2.std(), d1.std(), d2.std()], align='center')
         plt.title(f'Viabilities of {self.viability_labels[0]} and {self.viability_labels[1]}')
         plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
-            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+            "Initial " + self.viability_labels[1], "Later " + self.viability_labels[1]])
         plt.xlabel('Round')
         plt.ylabel('Raw Viabilities')
         # plt.plot([0,1], [r1.mean(), r2.mean()], c="r", lw=2)
@@ -733,7 +733,7 @@ class Multibatch():
         box = plt.boxplot([r1, r2, d1, d2], positions=np.arange(4))
         plt.title(f'Viabilies of {self.viability_labels[0]} and {self.viability_labels[1]}')
         plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
-            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+            "Initial " + self.viability_labels[1], "Later " + self.viability_labels[1]])
         plt.xlabel('Round')
         plt.ylabel('Raw Viabilities')
         #plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
