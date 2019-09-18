@@ -630,10 +630,10 @@ class Multibatch():
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
         manip = batch.manipulation()
-        act = manip.apply(lambda u: int(u['correct']) / u['numOptions'] \
-            if u['numOptions'] is not None else None, axis=1).mean()
         exp = manip.apply(lambda u: 1 / u['numOptions'] \
             if u['numOptions'] is not None else None, axis=1).mean()
+        act = (manip['correct'].value_counts()[True] \
+            if True in manip['correct'].value_counts() else 0) / manip['correct'].value_counts().sum()
 
         return [act,exp]
 
@@ -854,7 +854,7 @@ class Multibatch():
 
         # 3. create barplot
         print("\n>>> barplot:")
-        bar = plt.bar(np.arange(1), actual.mean(), yerr=actual.std(), align='center')
+        bar = plt.bar(np.arange(1), actual.mean(), align='center')
         plt.title('Manipulation Check Accuracy')
         plt.xticks(np.arange(1), '')
         plt.xlabel('Actual Accuracy')
