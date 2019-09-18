@@ -736,8 +736,8 @@ class Multibatch():
             "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
         plt.xlabel('Round')
         plt.ylabel('Raw Viabilities')
-        plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
-        plt.plot([2,3], [d1.median(), d2.median()], c="r", lw=2)
+        #plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
+        #plt.plot([2,3], [d1.median(), d2.median()], c="r", lw=2)
         plt.show()
 
         # 7. paired t-test initial
