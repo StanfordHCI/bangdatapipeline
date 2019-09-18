@@ -626,6 +626,12 @@ class Multibatch():
         dd = viability.iloc[batch.refPair2[0]-1][self.viability_labels[1]].item()
 
         return [r1, r2, rd, d1, d2, dd]
+
+    def __batch_early_viability(self, batch: BangDataResult):
+        """ extracts the average viability of the initial non refpair (so not last two) rounds """
+        viability = batch.viability()
+        scores = viability.iloc[0 : batch.numRounds-2]['mean_viability']
+        return scores.mean()
         
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
@@ -637,20 +643,27 @@ class Multibatch():
 
         return [act,exp]
 
+    def __batch_users(self, batch: BangDataResult):
+        """ extracts the number of final active users in a batch """
+        viab = batch.viability()
+        return viab.tail(1)['user'].count().sum()
+
     def summarize(self, block=False):
         """ prints a multibatch df that summarizes key results indexed by batch """
         if self._verbose:
             print(">>> Summarizing")
         
-        summary = pd.DataFrame(columns=["batch", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
+        summary = pd.DataFrame(columns=["batch", "early", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
             "diff_" + self.viability_labels[0], "initial_" + self.viability_labels[1], "later_" + self.viability_labels[1], \
-            "diff_" + self.viability_labels[1], "manip_actual", "manip_chance", "refPair1", "refPair2"])
+            "diff_" + self.viability_labels[1], "manip_actual", "manip_chance", "refPair1", "refPair2", "numUsers"])
         i=1
         for batch in self._filt_batches:
+            early = self.__batch_early_viability(batch)
             viability = self.__batch_viabilities(batch, block)
             manip = self.__batch_manipulations(batch)
-            summary.loc[i] = [batch.batch, viability[0], viability[1], viability[2], viability[3], viability[4], viability[5], \
-                manip[0], manip[1], batch.refPair1, batch.refPair2]
+            num_users = self.__batch_users(batch)
+            summary.loc[i] = [batch.batch, early, viability[0], viability[1], viability[2], viability[3], viability[4], viability[5], \
+                manip[0], manip[1], batch.refPair1, batch.refPair2, num_users]
             i += 1
         self.summary = summary
         return summary
@@ -668,12 +681,72 @@ class Multibatch():
 
     ## ANALYSES ##
     def analyze_viability(self):
-        """ wrapper function to set default viability analysis type based on whether 
-        this is 1) rec/cont or 2) best/worst """
-        if self.viability_labels == ['reconvene', 'control']:
-            return self.analyze_viability_diff()
-        else:
-            return self.analyze_viability_raw()
+        """ performs all raw viability score analyses across batches (section Rb split)
+        1. prints refPair1[0] mean, std
+        2. prints refPair1[1] mean, std
+        3. prints refPair2[0] mean, std
+        4. prints refPair2[1] mean, std
+        5. prints bar plot of v2=R/B, v2=D/W means + std error
+        6. prints box plot of v2=R/B, v2=D/W 
+        7. prints paired t-test results for initial scores R/B vs D/W
+        8. prints paired t-test results for later scores R/B vs D/W  
+        returns nothing """
+        # error checking
+        if self.summary is None:
+            print("You must run .summarize() before running this function")
+
+        r1 = self.summary["initial_" + self.viability_labels[0]]
+        r2 = self.summary["later_" + self.viability_labels[0]]
+        d1 = self.summary["initial_" + self.viability_labels[1]]
+        d2 = self.summary["later_" + self.viability_labels[1]]
+        
+        # 1. print r1 mean, std
+        print(f"\n>>> initial_{self.viability_labels[0]} mean, standard deviation:")
+        print(f"n: {r1.count()}, mean: {r1.mean()}, std: {r1.std()}")
+
+        # 2. print r2 mean, std
+        print(f"\n>>> later_{self.viability_labels[0]} mean, standard deviation:")
+        print(f"n: {r2.count()}, mean: {r2.mean()}, std: {r2.std()}")
+
+        # 3. print d1 mean, std
+        print(f"\n>>> initial_{self.viability_labels[1]} mean, standard deviation:")
+        print(f"n: {d1.count()}, mean: {d1.mean()}, std: {d1.std()}")
+
+        # 4. print d2 mean, std
+        print(f"\n>>> later_{self.viability_labels[1]} mean, standard deviation:")
+        print(f"n: {d2.count()}, mean: {d2.mean()}, std: {d2.std()}")
+
+        # 5. create barplot
+        print("\n>>> barplot:")
+        bar = plt.bar(np.arange(4), [r1.mean(), r2.mean(), d1.mean(), d2.mean()], yerr=[r1.std(), r2.std(), d1.std(), d2.std()], align='center')
+        plt.title(f'Viabilities of {self.viability_labels[0]} and {self.viability_labels[1]}')
+        plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
+            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+        plt.xlabel('Round')
+        plt.ylabel('Raw Viabilities')
+        # plt.plot([0,1], [r1.mean(), r2.mean()], c="r", lw=2)
+        # plt.plot([2,3], [d1.mean(), d2.mean()], c="r", lw=2)
+        plt.show()
+
+        # 6. create boxplot
+        print("\n>>> boxplot:")
+        box = plt.boxplot([r1, r2, d1, d2], positions=np.arange(4))
+        plt.title(f'Viabilies of {self.viability_labels[0]} and {self.viability_labels[1]}')
+        plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
+            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+        plt.xlabel('Round')
+        plt.ylabel('Raw Viabilities')
+        plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
+        plt.plot([2,3], [d1.median(), d2.median()], c="r", lw=2)
+        plt.show()
+
+        # 7. paired t-test initial
+        print(f"\n>>> paired t-test between initial_{self.viability_labels[0]} and initial_{self.viability_labels[1]}:")
+        print(stats.ttest_rel(r1, d1))
+
+        # 8. paired t-test later
+        print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
+        print(stats.ttest_rel(r2, d2))
             
     def analyze_viability_diff(self):
         """ performs all viability diff analyses across batches (section Rb)
@@ -720,37 +793,38 @@ class Multibatch():
         print(f"\n>>> paired t-test between diff_{self.viability_labels[0]} and diff_{self.viability_labels[1]}:")
         print(stats.ttest_rel(r, d))
 
-    def analyze_viability_raw(self):
-        """ performs all raw viability score analyses across batches (section Rb split)
-        1. prints refPair1[0] mean, std
-        2. prints refPair1[1] mean, std
-        3. prints refPair2[0] mean, std
+    def analyze_viability_early(self):
+        """ performs analyze_viability but with early viability score (average of initial)
+        really just a study 1 figure generator
+        1. prints early mean, std
+        2. prints refPair1[0] mean, std
+        3. prints refPair1[1] mean, std
         4. prints refPair2[1] mean, std
-        5. prints bar plot of v2=R/B, v2=D/W means + std error
-        6. prints box plot of v2=R/B, v2=D/W 
-        7. prints paired t-test results for initial scores R/B vs D/W
-        8. prints paired t-test results for later scores R/B vs D/W  
+        5. prints bar plot
+        6. prints box plot 
+        7. prints paired t-test results for early and refPair1[1]
+        8. prints paired t-test results for early and refPair2[1] 
         returns nothing """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
 
+        e = self.summary["early"]
         r1 = self.summary["initial_" + self.viability_labels[0]]
         r2 = self.summary["later_" + self.viability_labels[0]]
-        d1 = self.summary["initial_" + self.viability_labels[1]]
         d2 = self.summary["later_" + self.viability_labels[1]]
         
-        # 1. print r1 mean, std
+        # 1. print early mean, std
+        print(f"\n>>> early mean, standard deviation:")
+        print(f"n: {e.count()}, mean: {e.mean()}, std: {e.std()}")
+        
+        # 2. print r1 mean, std
         print(f"\n>>> initial_{self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r1.count()}, mean: {r1.mean()}, std: {r1.std()}")
 
-        # 2. print r2 mean, std
+        # 3. print r2 mean, std
         print(f"\n>>> later_{self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r2.count()}, mean: {r2.mean()}, std: {r2.std()}")
-
-        # 3. print d1 mean, std
-        print(f"\n>>> initial_{self.viability_labels[1]} mean, standard deviation:")
-        print(f"n: {d1.count()}, mean: {d1.mean()}, std: {d1.std()}")
 
         # 4. print d2 mean, std
         print(f"\n>>> later_{self.viability_labels[1]} mean, standard deviation:")
@@ -758,35 +832,32 @@ class Multibatch():
 
         # 5. create barplot
         print("\n>>> barplot:")
-        bar = plt.bar(np.arange(4), [r1.mean(), r2.mean(), d1.mean(), d2.mean()], yerr=[r1.std(), r2.std(), d1.std(), d2.std()], align='center')
-        plt.title(f'Viabilities of {self.viability_labels[0]} and {self.viability_labels[1]}')
-        plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
-            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+        bar = plt.bar(np.arange(4), [e.mean(), r1.mean(), r2.mean(),d2.mean()], \
+            yerr=[e.std(), r1.std(), r2.std(), d2.std()], align='center')
+        plt.title(f'Study 1 Viabilities')
+        plt.xticks(np.arange(4), ["Early Viability", "Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
+            "Later" + self.viability_labels[1]])
         plt.xlabel('Round')
         plt.ylabel('Raw Viabilities')
-        plt.plot([0,1], [r1.mean(), r2.mean()], c="r", lw=2)
-        plt.plot([2,3], [d1.mean(), d2.mean()], c="r", lw=2)
         plt.show()
 
         # 6. create boxplot
         print("\n>>> boxplot:")
-        box = plt.boxplot([r1, r2, d1, d2], positions=np.arange(4))
-        plt.title(f'Viabilies of {self.viability_labels[0]} and {self.viability_labels[1]}')
-        plt.xticks(np.arange(4), ["Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
-            "Initial" + self.viability_labels[1], "Later" + self.viability_labels[1]])
+        box = plt.boxplot([e, r1, r2, d2], positions=np.arange(4))
+        plt.title(f'Study 1 Viabilities')
+        plt.xticks(np.arange(4), ["Early Viability", "Initial " + self.viability_labels[0],"Later " + self.viability_labels[0], \
+            "Later" + self.viability_labels[1]])
         plt.xlabel('Round')
         plt.ylabel('Raw Viabilities')
-        plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
-        plt.plot([2,3], [d1.median(), d2.median()], c="r", lw=2)
         plt.show()
 
-        # 7. paired t-test initial
-        print(f"\n>>> paired t-test between initial_{self.viability_labels[0]} and initial_{self.viability_labels[1]}:")
-        print(stats.ttest_rel(r1, d1))
+        # 7. paired t-test e and r2
+        print(f"\n>>> paired t-test between early and later_{self.viability_labels[0]}:")
+        print(stats.ttest_rel(r2, e))
 
-        # 8. paired t-test later
-        print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
-        print(stats.ttest_rel(r2, d2))
+        # 8. paired t-test e and d2
+        print(f"\n>>> paired t-test between early and later_{self.viability_labels[1]}:")
+        print(stats.ttest_rel(d2, e))
 
     def analyze_viability_all(self):
         """ boxplots all round viabilities just by raw round # """
@@ -855,12 +926,13 @@ class Multibatch():
         # 3. create barplot
         print("\n>>> barplot:")
         bar = plt.bar(np.arange(1), actual.mean(), align='center')
+        plt.errorbar(np.arange(1), actual.mean(), yerr=actual.std(), capsize=15.0, ecolor="black")
         plt.title('Manipulation Check Accuracy')
         plt.xticks(np.arange(1), '')
         plt.xlabel('Actual Accuracy')
         plt.ylabel('Accuracy')
-        plt.ylim(bottom=0, top=chance.mean()+0.1)
-        plt.axhline(y=chance.mean(),linewidth=2,label="Chance Accuracy") #threshold line
+        plt.ylim(bottom=0, top=actual.mean() + actual.std()+0.1)
+        plt.axhline(y=chance.mean(),linewidth=2,color="red",label="Chance Accuracy") #threshold line
         plt.legend()
         plt.show()
 
