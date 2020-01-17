@@ -13,16 +13,13 @@ SETTINGS = {
 ```
 
 ## usage
-Import into your python script using
+Import into your python script by cloning the repo and then using
 
 ```
-# base bangdatapipeline 
-!curl --remote-name \
-     -H 'Accept: application/vnd.github.v3.raw' \
-     --location https://raw.githubusercontent.com/StanfordHCI/bangdatapipeline/master/bangdata.py
+# Install bangdatapipeline & multibatch packages
+!pip install ./bangdatapipeline
 
-# custom multibatch engine - base is multibatch.py
-!curl --remote-name \
-     -H 'Accept: application/vnd.github.v3.raw' \
-     --location https://raw.githubusercontent.com/StanfordHCI/bangdatapipeline/master/multibatch/parallelworlds.py
+from bangdatapipeline import BangDataPipeline
+from multibatch import Multibatch # imports default Multibatch
+from multibatch.parallelworlds import Multibatch # or whatever version you add
 ```
