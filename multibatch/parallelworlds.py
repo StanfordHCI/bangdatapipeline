@@ -58,14 +58,14 @@ class Multibatch(Base):
         viability = batch.viability(block=block)
 
         # get scores for the first pair of refs and their diff
-        r1 = viability.iloc[batch.refPair1[0]-1]['mean_viability'].item()
-        r2 = viability.iloc[batch.refPair1[1]-1]['mean_viability'].item()
-        rd = viability.iloc[batch.refPair1[0]-1][self.viability_labels[0]].item()
+        r1 = viability.iloc[batch.refPair1[0]-1]['mean_viability'].iloc[0]
+        r2 = viability.iloc[batch.refPair1[1]-1]['mean_viability'].iloc[0]
+        rd = viability.iloc[batch.refPair1[0]-1][self.viability_labels[0]].iloc[0]
 
         # get scores for the second pair of refs and their diff
-        d1 = viability.iloc[batch.refPair2[0]-1]['mean_viability'].item()
-        d2 = viability.iloc[batch.refPair2[1]-1]['mean_viability'].item()
-        dd = viability.iloc[batch.refPair2[0]-1][self.viability_labels[1]].item()
+        d1 = viability.iloc[batch.refPair2[0]-1]['mean_viability'].iloc[0]
+        d2 = viability.iloc[batch.refPair2[1]-1]['mean_viability'].iloc[0]
+        dd = viability.iloc[batch.refPair2[0]-1][self.viability_labels[1]].iloc[0]
 
         return [r1, r2, rd, d1, d2, dd]
 

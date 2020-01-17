@@ -94,9 +94,9 @@ class BangDataResult():
 
         # get diffs here, team only
         viability[self.labels[0]] = - \
-            (viability['mean_viability'] - viability.iloc[self.refPair1[1]-1]['mean_viability'].item())
+            (viability['mean_viability'] - viability.iloc[self.refPair1[1]-1]['mean_viability'].iloc[0])
         viability[self.labels[1]] = - \
-            (viability['mean_viability'] - viability.iloc[self.refPair2[1]-1]['mean_viability'].item())
+            (viability['mean_viability'] - viability.iloc[self.refPair2[1]-1]['mean_viability'].iloc[0])
 
         return viability
     
