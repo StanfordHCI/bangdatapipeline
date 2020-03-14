@@ -123,14 +123,14 @@ class BangDataPipeline():
     def get_json(self, batch_id: str):
         """ public: for a batch_id, gets json data """
         # make request to server
-        this_url = "https://bang-prod.deliveryweb.ru:3001/api/admin/batch-result/" + batch_id
+        this_url = "https://bang.stanford.edu:3001/api/admin/batch-result/" + batch_id
         querystring = {"search.sessiontype": "1522435540042001BxTD"}
         payload = {"key": "value"}
         this_header = {
             'Accept': "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
             'admintoken': self._token,
-            'Origin': "https://bang-prod.deliveryweb.ru",
-            'Referer': "https://bang-prod.deliveryweb.ru:3001/batches/" + batch_id,
+            'Origin': "https://bang.stanford.edu",
+            'Referer': "https://bang.stanford.edu/batches/" + batch_id,
         }
         get_request = requests.request(
             "GET", this_url, json=payload, headers=this_header, params=querystring)
