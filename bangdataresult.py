@@ -24,7 +24,7 @@ class BangDataResult():
         self.refPair1 = sorted(json['expRounds']) # always [ref, reconvene]
         self.refPair2 = sorted(json['worstRounds']) if 'worstRounds' in json and len(json['worstRounds']) != 0 \
             else [self.refPair1[0], self.numRounds - (self.refPair1[1] == self.numRounds)]
-            # will either be [ref2, reconvene2] or [ref, control]
+            # will either be [ref2, reconvene2] or [ref, median]
         self.labels = ["reconvene", "control"] if self.refPair1[0] == self.refPair2[0] else ["highest", "lowest"]
         
         ## PRIVATE FIELDS ##

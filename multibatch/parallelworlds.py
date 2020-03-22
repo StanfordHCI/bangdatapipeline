@@ -60,20 +60,18 @@ class Multibatch(Base):
         # get scores for the first pair of refs and their diff
         r1 = viability.iloc[batch.refPair1[0]-1]['mean_viability'].iloc[0]
         r2 = viability.iloc[batch.refPair1[1]-1]['mean_viability'].iloc[0]
-        rd = viability.iloc[batch.refPair1[0]-1][self.viability_labels[0]].iloc[0]
-
+       
         # get scores for the second pair of refs and their diff
         d1 = viability.iloc[batch.refPair2[0]-1]['mean_viability'].iloc[0]
         d2 = viability.iloc[batch.refPair2[1]-1]['mean_viability'].iloc[0]
-        dd = viability.iloc[batch.refPair2[0]-1][self.viability_labels[1]].iloc[0]
+       
+        return [r1, r2, d1, d2]
 
-        return [r1, r2, rd, d1, d2, dd]
-
-    def __batch_early_viability(self, batch: BangDataResult):
+    def __batch_viability(self, batch: BangDataResult):
         """ extracts the average viability of the initial non refpair (so not last two) rounds """
         viability = batch.viability()
-        scores = viability.iloc[0 : batch.numRounds-2]['mean_viability']
-        return scores.mean()
+        scores = viability.iloc[0 : batch.numRounds]['mean_viability']
+        return scores
         
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
@@ -95,16 +93,20 @@ class Multibatch(Base):
         if self._verbose:
             print(">>> Summarizing")
 
-        summary = pd.DataFrame(columns=["batch", "early", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
-            "diff_" + self.viability_labels[0], "initial_" + self.viability_labels[1], "later_" + self.viability_labels[1], \
-            "diff_" + self.viability_labels[1], "manip_actual", "manip_chance", "refPair1", "refPair2", "numUsers"])
+        summary = pd.DataFrame(columns=["batch", *(np.arange(self._filt_batches[0].numRounds) + 1), "median", "early_mean", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
+            "initial_" + self.viability_labels[1], "later_" + self.viability_labels[1], \
+            "manip_actual", "manip_chance", "refPair1", "refPair2", "numUsers"])
+
         i=1
         for batch in self._filt_batches:
-            early = self.__batch_early_viability(batch)
+            rounds = self.__batch_viability(batch)
             viability = self.__batch_viabilities(batch, block)
+            median_candidates = [batch.refPair1[1]-1, batch.refPair2[1]-1] if (self.viability_labels[1] == "control") else [batch.refPair1[1]-1]
+            median = np.median(rounds.drop(rounds.index[median_candidates])) 
+            mean = np.mean(rounds[:batch.numRounds - 2])
             manip = self.__batch_manipulations(batch)
             num_users = self.__batch_users(batch)
-            summary.loc[i] = [batch.batch, early, viability[0], viability[1], viability[2], viability[3], viability[4], viability[5], \
+            summary.loc[i] = [batch.batch, *rounds, median, mean, viability[0], viability[1], viability[2], viability[3], \
                 manip[0], manip[1], batch.refPair1, batch.refPair2, num_users]
             i += 1
         self.summary = summary
@@ -291,10 +293,10 @@ class Multibatch(Base):
         if self.summary is None:
             print("You must run .summarize() before running this function")
 
-        e = self.summary["early"]
+        e = self.summary["early_mean"]
         r1 = self.summary["initial_" + self.viability_labels[0]]
         r2 = self.summary["later_" + self.viability_labels[0]]
-        d2 = self.summary["later_" + self.viability_labels[1]]
+        m = self.summary["median"]
         
         # 1. print early mean, std
         print(f"\n>>> early mean, standard deviation:")
@@ -308,16 +310,16 @@ class Multibatch(Base):
         print(f"\n>>> later_{self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r2.count()}, mean: {r2.mean()}, std: {r2.std()}")
 
-        # 4. print d2 mean, std
-        print(f"\n>>> later_{self.viability_labels[1]} mean, standard deviation:")
-        print(f"n: {d2.count()}, mean: {d2.mean()}, std: {d2.std()}")
+        # 4. print m mean, std
+        print(f"\n>>> median round mean, standard deviation:")
+        print(f"n: {m.count()}, mean: {m.mean()}, std: {m.std()}")
 
         title="Viability Scores of Rounds"
         labels=[textwrap.fill(text, 12) for text in \
-            ["Initial 3 Rounds","Best Initial Round","Reconvened Round","Control Round"]]
+            ["Initial 3 Rounds","Best Initial Round","Reconvened Round","Median Round"]]
         ylabel = "Team Mean Viability"
         
-        order = [e, r1, r2, d2]
+        order = [e, r1, r2, m]
         means = [x.mean() for x in order]
         stds = [x.std() for x in order]
         maxs = [x.max()  for x in order]
@@ -359,7 +361,7 @@ class Multibatch(Base):
         # 8. paired t-test e and d2
         print(f"\n>>> paired t-test between early and later_{self.viability_labels[1]}:")
         # print(stats.ttest_rel(d2, e))
-        tt1 = researchpy.ttest(d2, e, paired=True)[1]
+        tt1 = researchpy.ttest(m, e, paired=True)[1]
         print(tt1)
 
     def analyze_viability_all(self):
@@ -371,7 +373,7 @@ class Multibatch(Base):
         return boxplot
 
     def analyze_viability_single(self):
-        """ boxplots the value later reconvene - later control """
+        """ boxplots the value later reconvene - later median """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
