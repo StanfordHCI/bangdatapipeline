@@ -20,20 +20,18 @@ def style_plt():
     plt.rc('font', **default_font)
     plt.rc('lines', linewidth=4)
 
-    # figure
-    plt.rc('figure', titlesize='small', figsize=[4, 2])
-    plt.rc('image', aspect=1.75)
-
     # general graphs
-    plt.rc('axes', edgecolor='black', facecolor="none", axisbelow=True, grid=False, \
-        labelpad=4.0, linewidth=1.0, labelcolor='black', labelsize='medium', labelweight="normal", \
-            prop_cycle=cycler('color', [default_color]))
-    plt.rc('axes.spines', top=False, right=False)
+    plt.rc('axes', edgecolor='black', facecolor="none", axisbelow=True, grid=False)
+    #plt.rc('grid', color='w', linestyle='solid', lw=1.5)
     plt.rc('xtick.major', width=1.5, size=8.0)
     plt.rc('xtick', direction="inout", labelsize='medium', color='black')
     plt.rc('ytick.major', width=1.5, size=5.0)
     plt.rc('ytick', direction="out", labelsize='small', color='black')
-    plt.rc('grid', color='w', linestyle='solid', lw=1.5)
+    plt.rc('axes', labelpad=4.0, linewidth=1.0, labelcolor='black', labelsize='medium', labelweight="normal")
+    plt.rc('axes.spines', top=False, right=False)
+    plt.rc('axes', prop_cycle=cycler('color', [default_color]))
+    plt.rc('figure', titlesize='small', figsize=[7.13, 4])
+    plt.rc('image', aspect=1.75)
 
     # boxplots
     plt.rc('boxplot', showcaps=True, showmeans=False, showbox=True, whiskers=True, patchartist=True)
