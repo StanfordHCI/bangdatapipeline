@@ -27,7 +27,7 @@ def label_diff(i,j,text,tops):
         tops: the maxs of all data plotted """
     X = np.arange(len(tops))
     x = (X[i]+X[j])/2
-    y = max(tops[i], tops[j])
+    y = max(tops[i], tops[j]) - 5
     dx = abs(X[i]-X[j])
 
     props = {'connectionstyle':'bar','arrowstyle':'-',\
