@@ -207,67 +207,6 @@ class Multibatch(Base):
         tt1 = researchpy.ttest(r2, d2, paired=True)[1]
         print(tt1)
             
-    def analyze_viability_diff(self):
-        """ performs all viability diff analyses across batches (section Rb)
-        1. prints v2=R/B mean, std
-        2. prints v2=D/W mean, std
-        3. prints bar plot of v2=R/B, v2=D/W means + std error
-        4. prints box plot of v2=R/B, v2=D/W 
-        5. prints paired t-test results for diffs between v2=R/B and v2=D/W
-        returns nothing """
-        # error checking
-        if self.summary is None:
-            print("You must run .summarize() before running this function")
-
-        r = self.summary["diff_" + self.viability_labels[0]]
-        d = self.summary["diff_" + self.viability_labels[1]]
-        
-        # 1. print r_diff mean, std
-        print(f"\n>>> diff_{self.viability_labels[0]} mean, standard deviation:")
-        print(f"n: {r.count()}, mean: {r.mean()}, std: {r.std()}")
-
-        # 2. print d_diff mean, std
-        print(f"\n>>> diff_{self.viability_labels[1]} mean, standard deviation:")
-        print(f"n: {d.count()}, mean: {d.mean()}, std: {d.std()}")
-
-        title=f'Viability Diffs Between {self.viability_labels[0]} and {self.viability_labels[1]}'
-        labels=[textwrap.fill(text, 12) for text in \
-            [self.viability_labels[0], self.viability_labels[1]]]
-        ylabel = "Growth in Viability from Reference Round"
-        
-        order = [r, d]
-        means = [x.mean() for x in order]
-        stds = [x.std() for x in order]
-        maxs = [x.max()  for x in order]
-
-        # 3. create barplot
-        print("\n>>> barplot:")
-        plt.figure(1)
-        bar = plt.bar(np.arange(2), means, yerr=stds, align='center')
-        plt.title(title)
-        plt.xticks(np.arange(2), labels)
-        #plt.xlabel('V2')
-        plt.ylabel(ylabel)
-        plt.savefig("diff_bar.pdf")
-        plt.show()
-
-        #4. create boxplot
-        print("\n>>> boxplot:")
-        plt.figure(2)
-        box = plt.boxplot(order, positions=np.arange(2))
-        plt.title(title)
-        plt.xticks(np.arange(2), labels)
-        plt.xlabel('V2')
-        plt.ylabel(ylabel)
-        plt.savefig("diff_box.pdf")
-        plt.show()
-
-        # 5. paired t-test
-        print(f"\n>>> paired t-test between diff_{self.viability_labels[0]} and diff_{self.viability_labels[1]}:")
-        # print(stats.ttest_rel(r, d))
-        tt1 = researchpy.ttest(r, d, paired=True)[1]
-        print(tt1)
-
     def analyze_viability_early(self, *diff_args: [int, int, str]):
         """ performs analyze_viability but with early viability score (average of initial)
         really just a study 1 figure generator
@@ -349,42 +288,6 @@ class Multibatch(Base):
 
         # return data for exterior processing
         return order
-
-    def analyze_viability_all(self):
-        """ boxplots all round viabilities just by raw round # """
-        if self.df is None:
-            self.aggregate()
-
-        boxplot = self.df.boxplot()
-        return boxplot
-
-    def analyze_viability_single(self):
-        """ boxplots the value later reconvene - later median """
-        # error checking
-        if self.summary is None:
-            print("You must run .summarize() before running this function")
-
-        r = self.summary["later_" + self.viability_labels[0]]
-        d = self.summary["later_" + self.viability_labels[1]]
-        s = r-d
-        
-        # 1. print r1 mean, std
-        print(f"\n>>> single value later {self.viability_labels[0]} - {self.viability_labels[1]} mean, standard deviation:")
-        print(f"n: {s.count()}, mean: {s.mean()}, std: {s.std()}")
-
-        # 2. describe
-        print(">>> single value desc")
-        print(s.describe())
-
-        # 3. boxplot
-        print("\n>>> boxplot:")
-        box = plt.boxplot(s, positions=np.arange(1))
-        plt.title(f'Single value later {self.viability_labels[0]} - {self.viability_labels[1]}')
-        plt.xticks(np.arange(1), ["Single Value"])
-        plt.xlabel('')
-        plt.ylabel('Raw Viabilities')
-        plt.savefig("single_box.pdf")
-        plt.show()
 
     def analyze_manipulation(self):
         """ performs all manipulation check analyses across batches (section Ra)
