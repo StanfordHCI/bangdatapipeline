@@ -275,7 +275,7 @@ class Multibatch(Base):
         plt.show()     
 
         # 6. paired t-test r1 and r2
-        print(f"\n>>> paired t-test between median and reconvened {self.viability_labels[0]}:")
+        print(f"\n>>> paired t-test between initial and reconvened {self.viability_labels[0]}:")
         # print(stats.ttest_rel(r2, e))
         tt1 = researchpy.ttest(r1, r2, paired=True)[1]
         print(tt1)
