@@ -280,89 +280,79 @@ class Multibatch(Base):
     def analyze_viability_early(self):
         """ performs analyze_viability but with early viability score (average of initial)
         really just a study 1 figure generator
-        1. prints early mean, std
-        2. prints refPair1[0] mean, std
-        3. prints refPair1[1] mean, std
-        4. prints refPair2[1] mean, std
-        5. prints bar plot
-        6. prints box plot 
-        7. prints paired t-test results for early and refPair1[1]
-        8. prints paired t-test results for early and refPair2[1] 
+        1. prints refPair1[0] mean, std
+        2. prints refPair1[1] mean, std
+        3. prints median mean, std
+        4. prints bar plot
+        5. prints box plot 
+        6. prints paired t-test results for refPair1[0] and refPair1[1] 
+        7. prints paired t-test results for median and refPair1[1]
         returns nothing """
         # error checking
         if self.summary is None:
             print("You must run .summarize() before running this function")
 
-        e = self.summary["early_mean"]
         r1 = self.summary["initial_" + self.viability_labels[0]]
         r2 = self.summary["later_" + self.viability_labels[0]]
         m = self.summary["median"]
         
-        # 1. print early mean, std
-        print(f"\n>>> early mean, standard deviation:")
-        print(f"n: {e.count()}, mean: {e.mean()}, std: {e.std()}")
-        
-        # 2. print r1 mean, std
+        # 1. print r1 mean, std
         print(f"\n>>> initial_{self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r1.count()}, mean: {r1.mean()}, std: {r1.std()}")
 
-        # 3. print r2 mean, std
+        # 2. print r2 mean, std
         print(f"\n>>> later_{self.viability_labels[0]} mean, standard deviation:")
         print(f"n: {r2.count()}, mean: {r2.mean()}, std: {r2.std()}")
 
-        # 4. print m mean, std
+        # 3. print m mean, std
         print(f"\n>>> median round mean, standard deviation:")
         print(f"n: {m.count()}, mean: {m.mean()}, std: {m.std()}")
 
         title="Viability Scores of Rounds"
         labels=[textwrap.fill(text, 12) for text in \
-            ["Initial 3 Rounds","Best Initial Round","Reconvened Round","Median Round"]]
+            ["Best Initial Round","Reconvened Round","Median Round"]]
         ylabel = "Team Mean Viability"
         
-        order = [e, r1, r2, m]
+        order = [r1, r2, m]
         means = [x.mean() for x in order]
         stds = [x.std() for x in order]
-        maxs = [x.max()  for x in order]
 
-        # 5. create barplot
+        # 4. create barplot
         print("\n>>> barplot:")
         plt.figure(1)
-        bar = plt.bar(np.arange(4), means, yerr=stds, align='center')
+        bar = plt.bar(np.arange(3), means, yerr=stds, align='center')
         plt.title(title)
-        plt.xticks(np.arange(4), labels)
-        #plt.xlabel('Round')
+        plt.xticks(np.arange(3), labels)
         plt.ylabel(ylabel)
         plt.savefig("early_bar.pdf")
         plt.show()
         
-        # 6. create boxplot
+        # 5. create boxplot
         print("\n>>> boxplot:")
         plt.figure(2)
-        #plt.figure(figsize=[7.13, 7])
-        box = plt.boxplot(order, positions=np.arange(4))
+        box = plt.boxplot(order, positions=np.arange(3))
         plt.title(title)
-        plt.xticks(np.arange(4), labels)
-        #plt.xlabel('Round')
+        plt.xticks(np.arange(3), labels)
         plt.ylabel(ylabel)
         plt.ylim(top=70, bottom=14)
         
-        label_diff(2,3,'***',maxs)
-        #label_diff(1,2,'ns',maxs)
-
         plt.savefig("early_box.pdf")
         plt.show()       
 
-        # 7. paired t-test e and r2
-        print(f"\n>>> paired t-test between early and later_{self.viability_labels[0]}:")
+        # 6. paired t-test r1 and r2
+        print(f"\n>>> paired t-test between median and reconvened {self.viability_labels[0]}:")
         # print(stats.ttest_rel(r2, e))
-        tt1 = researchpy.ttest(r2, e, paired=True)[1]
+        tt1 = researchpy.ttest(r1, r2, paired=True)[1]
         print(tt1)
 
-        # 8. paired t-test e and d2
-        print(f"\n>>> paired t-test between early and later_{self.viability_labels[1]}:")
-        # print(stats.ttest_rel(d2, e))
-        tt1 = researchpy.ttest(m, e, paired=True)[1]
+        # 7. paired t-test median and r2
+        print(f"\n>>> paired t-test between median and reconvened {self.viability_labels[0]}:")
+        # print(stats.ttest_rel(r2, e))
+        tt1 = researchpy.ttest(m, r2, paired=True)[1]
         print(tt1)
+
+        # return data for exterior processing
+        return order
 
     def analyze_viability_all(self):
         """ boxplots all round viabilities just by raw round # """
