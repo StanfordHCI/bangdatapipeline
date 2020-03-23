@@ -53,26 +53,26 @@ class Multibatch(Base):
         self.summary = None
 
     ## SUMMARY TABLE ##
-    def __batch_viabilities(self, batch: BangDataResult, block):
-        """ extracts the viabilitys for the two refpairs, and the diffs between them """
+    def __refPair_viabilities(self, batch: BangDataResult, block):
+        """ extracts the viabilitys for the two refpairs """
         viability = batch.viability(block=block)
 
-        # get scores for the first pair of refs and their diff
+        # get scores for the first pair of refs
         r1 = viability.iloc[batch.refPair1[0]-1]['mean_viability'].iloc[0]
         r2 = viability.iloc[batch.refPair1[1]-1]['mean_viability'].iloc[0]
        
-        # get scores for the second pair of refs and their diff
+        # get scores for the second pair of refs
         d1 = viability.iloc[batch.refPair2[0]-1]['mean_viability'].iloc[0]
         d2 = viability.iloc[batch.refPair2[1]-1]['mean_viability'].iloc[0]
        
         return [r1, r2, d1, d2]
 
-    def __batch_viability(self, batch: BangDataResult):
-        """ extracts the average viability of the initial non refpair (so not last two) rounds """
-        viability = batch.viability()
-        scores = viability.iloc[0 : batch.numRounds]['mean_viability']
-        return scores
-        
+    def __median_viability(self, batch: BangDataResult):
+        """ extracts the median viability of all masked rounds """
+        unmasked = [batch.refPair1[1], batch.refPair2[1]] if (self.viability_labels[1] != "control") else [batch.refPair1[1]]
+        rounds = batch.viability()['mean_viability'].values
+        return np.median([rounds[i] for i in range(batch.numRounds) if i + 1 not in unmasked])
+
     def __batch_manipulations(self, batch: BangDataResult):
         """ extracts and calcs the expected and actual chances for manip """
         manip = batch.manipulation()
@@ -93,24 +93,23 @@ class Multibatch(Base):
         if self._verbose:
             print(">>> Summarizing")
 
-        summary = pd.DataFrame(columns=["batch", *(np.arange(self._filt_batches[0].numRounds) + 1), "median", "early_mean", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
-            "initial_" + self.viability_labels[1], "later_" + self.viability_labels[1], \
-            "manip_actual", "manip_chance", "refPair1", "refPair2", "numUsers"])
+        if self.df is None:
+            self.aggregate()
+
+        summary = pd.DataFrame(columns=["median", "initial_" + self.viability_labels[0], "later_" + self.viability_labels[0], \
+            "initial_" + self.viability_labels[1], "later_" + self.viability_labels[1], "manip_actual", "manip_chance", "numUsers"])
 
         i=1
         for batch in self._filt_batches:
-            rounds = self.__batch_viability(batch)
-            viability = self.__batch_viabilities(batch, block)
-            median_candidates = [batch.refPair1[1]-1, batch.refPair2[1]-1] if (self.viability_labels[1] == "control") else [batch.refPair1[1]-1]
-            median = np.median(rounds.drop(rounds.index[median_candidates])) 
-            mean = np.mean(rounds[:batch.numRounds - 2])
+            viability = self.__refPair_viabilities(batch, block)
+            median = self.__median_viability(batch)
             manip = self.__batch_manipulations(batch)
             num_users = self.__batch_users(batch)
-            summary.loc[i] = [batch.batch, *rounds, median, mean, viability[0], viability[1], viability[2], viability[3], \
-                manip[0], manip[1], batch.refPair1, batch.refPair2, num_users]
+            summary.loc[i] = [median, *viability, *manip, num_users]
             i += 1
-        self.summary = summary
-        return summary
+        
+        self.summary = pd.concat([self.df, summary], axis=1, join="inner")
+        return self.summary
 
     def describe(self):
         """ describes all the columns in self.summary """
