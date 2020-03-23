@@ -124,7 +124,7 @@ class Multibatch(Base):
         return self.summary.describe()
 
     ## ANALYSES ##
-    def analyze_viability(self):
+    def analyze_viability(self, *diff_args: [int, int, str]):
         """ performs all raw viability score analyses across batches (section Rb split)
         1. prints refPair1[0] mean, std
         2. prints refPair1[1] mean, std
@@ -177,42 +177,34 @@ class Multibatch(Base):
         bar = plt.bar(np.arange(4), means, yerr=stds, align='center')
         plt.title(title)
         plt.xticks(np.arange(4), labels)
-        #plt.xlabel('Round')
         plt.ylabel(ylabel)
-        #plt.plot([0,1], [r1.mean(), r2.mean()], c="r", lw=2)
-        #plt.plot([2,3], [d1.mean(), d2.mean()], c="r", lw=2)
         plt.savefig("raw_bar.pdf")
         plt.show()
 
         # 6. create boxplot
         print("\n>>> boxplot:")
-        #plt.figure(figsize=[7.13, 7])
         plt.figure(2)
         box = plt.boxplot(order, positions=np.arange(4))
         plt.title(title)
         plt.xticks(np.arange(4), labels)
-        #plt.xlabel('Round')
         plt.ylabel(ylabel)
         plt.ylim(top=70, bottom=14)
-        #plt.plot([0,1], [r1.median(), r2.median()], c="r", lw=2)
-        #plt.plot([2,3], [d1.median(), d2.median()], c="r", lw=2)
-
-        #label_diff(0,1,'ns',maxs)
-        label_diff(2,3,'****',maxs)
-        label_diff(1,3,'**',maxs)
+        
+        # label diffs
+        for args in diff_args:
+            label_diff(*args, maxs)  
+        
 
         plt.savefig("raw_box.pdf")
         plt.show()
 
         # 7. paired t-test initial
         print(f"\n>>> paired t-test between initial_{self.viability_labels[0]} and initial_{self.viability_labels[1]}:")
-        # print(stats.ttest_rel(r1, d1))
         tt1 = researchpy.ttest(r1, d1, paired=True)[1]
         print(tt1)
 
         # 8. paired t-test later
         print(f"\n>>> paired t-test between later_{self.viability_labels[0]} and later_{self.viability_labels[1]}:")
-        # print(stats.ttest_rel(r2, d2))
         tt1 = researchpy.ttest(r2, d2, paired=True)[1]
         print(tt1)
             
@@ -277,7 +269,7 @@ class Multibatch(Base):
         tt1 = researchpy.ttest(r, d, paired=True)[1]
         print(tt1)
 
-    def analyze_viability_early(self):
+    def analyze_viability_early(self, *diff_args: [int, int, str]):
         """ performs analyze_viability but with early viability score (average of initial)
         really just a study 1 figure generator
         1. prints refPair1[0] mean, std
@@ -316,6 +308,7 @@ class Multibatch(Base):
         order = [r1, r2, m]
         means = [x.mean() for x in order]
         stds = [x.std() for x in order]
+        maxs = [x.max() for x in order]
 
         # 4. create barplot
         print("\n>>> barplot:")
@@ -334,10 +327,14 @@ class Multibatch(Base):
         plt.title(title)
         plt.xticks(np.arange(3), labels)
         plt.ylabel(ylabel)
-        plt.ylim(top=70, bottom=14)
-        
+        plt.ylim(top=70, bottom=14)  
+
+        # label diffs
+        for args in diff_args:
+            label_diff(*args, maxs)  
+
         plt.savefig("early_box.pdf")
-        plt.show()       
+        plt.show()     
 
         # 6. paired t-test r1 and r2
         print(f"\n>>> paired t-test between median and reconvened {self.viability_labels[0]}:")
